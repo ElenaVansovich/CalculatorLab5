@@ -93,6 +93,8 @@ int str_to_int(char *str, int n)
 		res += k * (*s - '0');
 	}
 	if (negative)
+
+
 	{
 		res *= -1;
 	}

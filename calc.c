@@ -38,17 +38,21 @@ static ssize_t proc_write(struct file *filp, const char __user *buffer, size_t c
 		printk(KERN_INFO "proc_write for first\n");
 		proc_buffer = first_buffer;
 		buffer_size = &first_buffer_size;
-	} else if (strcmp(name, PROC_SECOND) == 0)
+	}
+	else if (strcmp(name, PROC_SECOND) == 0)
 	{
 		printk(KERN_INFO "proc_write for second\n");
 		proc_buffer = second_buffer;
 		buffer_size = &second_buffer_size;
-	} else if (strcmp(name, PROC_OPERAND) == 0)
+	}
+	else if (strcmp(name, PROC_OPERAND) == 0)
 	{
 		printk(KERN_INFO "proc_write for operand\n");
 		proc_buffer = operand_buffer;
 		buffer_size = &operand_buffer_size;
-	} else {
+	}
+	else
+	{
 		return 0;
 	}
 
@@ -158,7 +162,9 @@ static ssize_t dev_read(struct file * file, char * buf, size_t count, loff_t *pp
 	{
 		memcpy(result, "Error!", 6);
 		len = 6;
-	} else {
+	}
+	else
+	{
 		sprintf(result, "%d", res);
 		len = int_len(res);
 	}
@@ -176,15 +182,18 @@ static ssize_t dev_read(struct file * file, char * buf, size_t count, loff_t *pp
 	return len;
 }
 
-static struct file_operations proc_file_ops = {
+static struct file_operations proc_file_ops = 
+{
 	.owner = THIS_MODULE,
 	.write = proc_write,
 };
-static const struct file_operations dev_file_ops = {
+static const struct file_operations dev_file_ops = 
+{
 	.owner = THIS_MODULE,
 	.read = dev_read,
 };
-static struct miscdevice result_dev = {
+static struct miscdevice result_dev = 
+{
 	MISC_DYNAMIC_MINOR,
 	DEV_RESULT,
 	&dev_file_ops
@@ -195,27 +204,31 @@ static int calc_init(void)
 {		
 	printk(KERN_INFO "Calc module started working\n");
 	first_proc_file = proc_create_data(PROC_FIRST, 766, NULL, &proc_file_ops, (void*) &first_proc_index);
-	if (first_proc_file == NULL) {
+	if (first_proc_file == NULL) 
+	{
 		printk(KERN_ERR "can't create first proc");
 		remove_proc_entry(PROC_FIRST, NULL);
 		return -ENOMEM;
 	}
 	second_proc_file = proc_create_data(PROC_SECOND, 766, NULL, &proc_file_ops, (void*) &second_proc_index);
-	if (second_proc_file == NULL) {
+	if (second_proc_file == NULL) 
+	{
 		printk(KERN_ERR "can't create second proc");
 		remove_proc_entry(PROC_FIRST, NULL);
 		remove_proc_entry(PROC_SECOND, NULL);
 		return -ENOMEM;
 	}
 	operand_proc_file = proc_create_data(PROC_OPERAND, 766, NULL, &proc_file_ops, (void*) &operand_proc_index);
-	if (operand_proc_file == NULL) {
+	if (operand_proc_file == NULL) 
+	{
 		printk(KERN_ERR "can't create operand proc");
 		remove_proc_entry(PROC_FIRST, NULL);
 		remove_proc_entry(PROC_SECOND, NULL);
 		remove_proc_entry(PROC_OPERAND, NULL);
 		return -ENOMEM;
 	}	
-	if (misc_register(&result_dev)) {
+	if (misc_register(&result_dev)) 
+	{
 		printk(KERN_ERR "Unable to register \"result\" misc device\n");
 		remove_proc_entry(PROC_FIRST, NULL);
 		remove_proc_entry(PROC_SECOND, NULL);

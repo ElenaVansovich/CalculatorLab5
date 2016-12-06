@@ -71,7 +71,6 @@ int str_to_int(char *str, int n)
 	int res = 0;
 	int i = 0;
 	int negative = 0;
-
 	if (*s == '-') {
 		negative = 1;
 		s++;
@@ -81,7 +80,7 @@ int str_to_int(char *str, int n)
 		len ++, s ++;
 	}
 	--s;
-	for (i = 0; i < len; i++, s--, k *= 10)	{
+	for (i = 0; i < len; i++, s--, k *= 10) {
 		res += k * (*s - '0');
 	}
 	if (negative) {
@@ -115,13 +114,13 @@ static ssize_t dev_read(struct file * file, char * buf, size_t count, loff_t *pp
 	int len = 0;
 	int first = str_to_int(first_buffer, first_buffer_size);
 	int second = str_to_int(second_buffer, second_buffer_size);
-	int flag = 1;
+	int ok = 1;
 	int res = 0;
 	if (operand_buffer_size == 0) {
-		flag = 0;
+		ok = 0;
 	}
 	else {
-		switch(operand_buffer[0]) {
+		switch (operand_buffer[0]) {
 			case '-':
 				res = first - second;
 				break;
@@ -133,24 +132,24 @@ static ssize_t dev_read(struct file * file, char * buf, size_t count, loff_t *pp
 				break;
 			case '/':
 				if (second == 0) {
-					flag = 0;
+					ok = 0;
 					break;
 				}
 				res = first / second;
 				break;
 			default:
-				flag = 0;
+				ok = 0;
 		}
 	}
-	if (!flag) {
+	if (!ok) {
 		memcpy(result, "Error!", 6);
 		len = 6;
-	}
+	} 
 	else {
 		sprintf(result, "%d", res);
 		len = int_len(res);
 	}
-	if (count < len){
+	if (count < len) {
 		return -EINVAL;
 	}
 	if (*ppos != 0) {
@@ -171,12 +170,14 @@ static ssize_t dev_read(struct file * file, char * buf, size_t count, loff_t *pp
 
 static struct file_operations proc_file_ops = {
 	.owner = THIS_MODULE,
-	.write = proc_write
+	.write = proc_write,
 };
+
 static const struct file_operations dev_file_ops = {
 	.owner = THIS_MODULE,
-	.read = dev_read
+	.read = dev_read,
 };
+
 static struct miscdevice result_dev = {
 	MISC_DYNAMIC_MINOR,
 	RESULT,
@@ -184,18 +185,18 @@ static struct miscdevice result_dev = {
 };
 
 
-static int calculator_init(void)
+static int calc_init(void)
 {		
 	printk(KERN_INFO "Calculator module started working\n");
-	first_proc_file = proc_create_data(PROC_FIRST, 777, NULL, &proc_file_ops, (void*) &first_proc_index);
+
+	first_proc_file = proc_create_data(PROC_FIRST, 766, NULL, &proc_file_ops, (void*) &first_proc_index);
 	if (first_proc_file == NULL) {
 		printk(KERN_ERR "can't create first proc");
 		remove_proc_entry(PROC_FIRST, NULL);
 		return -ENOMEM;
 	}
 
-	second_proc_file = proc_create_data(PROC_SECOND, 777, NULL, &proc_file_ops, (void*) &second_proc_index);
-
+	second_proc_file = proc_create_data(PROC_SECOND, 766, NULL, &proc_file_ops, (void*) &second_proc_index);
 	if (second_proc_file == NULL) {
 		printk(KERN_ERR "can't create second proc");
 		remove_proc_entry(PROC_FIRST, NULL);
@@ -203,18 +204,17 @@ static int calculator_init(void)
 		return -ENOMEM;
 	}
 
-	operand_proc_file = proc_create_data(PROC_OPERAND, 777, NULL, &proc_file_ops, (void*) &operand_proc_index);
-
-	if (operand_proc_file == NULL) 
-	{
+	operand_proc_file = proc_create_data(PROC_OPERAND, 766, NULL, &proc_file_ops, (void*) &operand_proc_index);
+	if (operand_proc_file == NULL) {
 		printk(KERN_ERR "can't create operand proc");
 		remove_proc_entry(PROC_FIRST, NULL);
 		remove_proc_entry(PROC_SECOND, NULL);
 		remove_proc_entry(PROC_OPERAND, NULL);
 		return -ENOMEM;
-	}	
+	}
+
 	if (misc_register(&result_dev)) {
-		printk(KERN_ERR "Unable to register result misc device\n");
+		printk(KERN_ERR "unable to register result misc device\n");
 		remove_proc_entry(PROC_FIRST, NULL);
 		remove_proc_entry(PROC_SECOND, NULL);
 		remove_proc_entry(PROC_OPERAND, NULL);
@@ -223,7 +223,7 @@ static int calculator_init(void)
 	return 0;
 }
 
-static void calculator_exit(void)
+static void calc_exit(void)
 {
 	printk(KERN_INFO "Calculator module stopped working\n");
 	remove_proc_entry(PROC_FIRST, NULL);
@@ -232,5 +232,6 @@ static void calculator_exit(void)
 	misc_deregister(&result_dev);
 }
 
-module_init(calculator_init);
-module_exit(calculator_exit);
+
+module_init(calc_init);
+module_exit(calc_exit);

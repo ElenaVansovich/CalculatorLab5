@@ -12,9 +12,7 @@ function test {
 	fi
 }
 
-test 3 + 13 16
-test 1 + 2 3
-test 4 + 10 14
+test 5 + 13 18
 test 12 / 2 6
 test 12 / -2 -6
 test 8 / 2 4

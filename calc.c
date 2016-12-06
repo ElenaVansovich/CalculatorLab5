@@ -8,92 +8,60 @@
 #include <linux/miscdevice.h>
 
 MODULE_LICENSE("Dual BSD/GPL");
-MODULE_DESCRIPTION("Calculator");
+MODULE_DESCRIPTION("Calculator Module");
 MODULE_AUTHOR("Elena Vansovich");
 MODULE_VERSION("1");
 
-#define PROC_FIRST "first"
-#define PROC_SECOND "second"
-#define PROC_OPERAND "operand"
-#define RESULT "result"
+#define FIRST_PROC "first"
+#define SECOND_PROC "second"
+#define OPERAND_PROC "operand"
+#define RESULT_PROC "result"
 
-#define PROC_MAX_SIZE 20
+#define MAX_SIZE 20
 
-static struct proc_dir_entry *first_proc_file, *second_proc_file, *operand_proc_file;
-static char first_buffer[PROC_MAX_SIZE], second_buffer[PROC_MAX_SIZE], operand_buffer[PROC_MAX_SIZE];
-static unsigned long first_buffer_size = 0, second_buffer_size = 0, operand_buffer_size = 0;
-static const int first_proc_index = 1, second_proc_index = 2, operand_proc_index = 3;
+static char first_buf[MAX_SIZE], second_buf[MAX_SIZE], operand_buf[MAX_SIZE];
 
-static ssize_t proc_write(struct file *filp, const char __user *buffer, size_t count, loff_t *data)
-{
-	char *proc_buffer;
-	unsigned long* buffer_size;
-	const unsigned char *name = filp->f_path.dentry->d_name.name;
+static unsigned long first_buf_size = 0, second_buf_size = 0, operand_buf_size = 0;
 
-	printk(KERN_INFO "proc_write called\n");
+static const int first_ind = 1, second_ind = 2, operand_ind = 3;
+
+static struct proc_dir_entry *first_file, *second_file, *operand_file;
 
 
-	if (strcmp(name, PROC_FIRST) == 0) {
-		printk(KERN_INFO "proc_write for first\n");
-		proc_buffer = first_buffer;
-		buffer_size = &first_buffer_size;
-	}
-	else if (strcmp(name, PROC_SECOND) == 0) {
-		printk(KERN_INFO "proc_write for second\n");
-		proc_buffer = second_buffer;
-		buffer_size = &second_buffer_size;
-	}
-	else if (strcmp(name, PROC_OPERAND) == 0) {
-		printk(KERN_INFO "proc_write for operand\n");
-		proc_buffer = operand_buffer;
-		buffer_size = &operand_buffer_size;
-	}
-	else {
-		return 0;
-	}
-
-	*buffer_size = count;
-	if (*buffer_size > PROC_MAX_SIZE ) {
-		*buffer_size = PROC_MAX_SIZE;
-	}
-	if ( copy_from_user(proc_buffer, buffer, *buffer_size) ) {
-		return -EFAULT;
-	}
-	
-	return *buffer_size;
-}
-
-int str_to_int(char *str, int n) 
+int string_to_int(char *str, int n) 
 {
 	int len = 0;
 	char *s = str;
 	int k = 1;
 	int res = 0;
 	int i = 0;
-	int negative = 0;
+	int is_negative = 0;
+
 	if (*s == '-') {
-		negative = 1;
+		is_negative = 1;
 		s++;
 		n--;
 	}
 	while (*s >= '0' && *s <= '9' && len < n) {
-		len ++, s ++;
+		len ++;
+		s ++;
 	}
 	--s;
 	for (i = 0; i < len; i++, s--, k *= 10) {
 		res += k * (*s - '0');
 	}
-	if (negative) {
+
+	if (is_negative) {
 		res *= -1;
 	}
 	return res;
 }
 
-
-int int_len(int num)
+int len_of_int(int num)
 {
 	int len = 0;
 	int k = 1;
+
 	if (num == 0) {
 		return 1;
 	}
@@ -108,19 +76,58 @@ int int_len(int num)
 	return len;
 }
 
-static ssize_t dev_read(struct file * file, char * buf, size_t count, loff_t *ppos)
+static ssize_t write_proc(struct file *f, const char __user *buf, size_t count, loff_t *data)
 {
-	char result[PROC_MAX_SIZE];
-	int len = 0;
-	int first = str_to_int(first_buffer, first_buffer_size);
-	int second = str_to_int(second_buffer, second_buffer_size);
-	int ok = 1;
-	int res = 0;
-	if (operand_buffer_size == 0) {
-		ok = 0;
+	char *proc_buf;
+	unsigned long* size_buf;
+	const unsigned char *name = f->f_path.dentry->d_name.name;
+
+
+	if (strcmp(name, FIRST_PROC) == 0) {
+		printk(KERN_INFO "write_proc first\n");
+		proc_buf = first_buf;
+		size_buf = &first_buf_size;
+	}
+	else if (strcmp(name, SECOND_PROC) == 0) {
+		printk(KERN_INFO "write_proc second\n");
+		proc_buf = second_buf;
+		size_buf = &second_buf_size;
+	}
+	else if (strcmp(name, OPERAND_PROC) == 0) {
+		printk(KERN_INFO "write_proc operand\n");
+		proc_buf = operand_buf;
+		size_buf = &operand_buf_size;
 	}
 	else {
-		switch (operand_buffer[0]) {
+		return 0;
+	}
+
+	*size_buf = count;
+	if (*size_buf > MAX_SIZE) {
+		*size_buf = MAX_SIZE;
+	}
+
+	if (copy_from_user(proc_buf, buf, *size_buf)) {
+		return -EFAULT;
+	}
+	
+	return *size_buf;
+}
+
+static ssize_t read_dev(struct file * f, char * buf, size_t count, loff_t *ppos)
+{
+	char result[MAX_SIZE];
+	int len = 0;
+	int first = string_to_int(first_buf, first_buf_size);
+	int second = string_to_int(second_buf, second_buf_size);
+	int flag = 1;
+	int res = 0;
+
+	if (operand_buf_size == 0) {
+		flag = 0;
+	}
+	else {
+		switch (operand_buf[0]) {
 			case '-':
 				res = first - second;
 				break;
@@ -132,22 +139,22 @@ static ssize_t dev_read(struct file * file, char * buf, size_t count, loff_t *pp
 				break;
 			case '/':
 				if (second == 0) {
-					ok = 0;
+					flag = 0;
 					break;
 				}
 				res = first / second;
 				break;
 			default:
-				ok = 0;
+				flag = 0;
 		}
 	}
-	if (!ok) {
+	if (!flag) {
 		memcpy(result, "Error!", 6);
 		len = 6;
 	} 
 	else {
 		sprintf(result, "%d", res);
-		len = int_len(res);
+		len = len_of_int(res);
 	}
 	if (count < len) {
 		return -EINVAL;
@@ -168,20 +175,20 @@ static ssize_t dev_read(struct file * file, char * buf, size_t count, loff_t *pp
 	return len;
 }
 
-static struct file_operations proc_file_ops = {
+static struct file_operations proc_file_op = {
 	.owner = THIS_MODULE,
-	.write = proc_write,
+	.write = write_proc,
 };
 
-static const struct file_operations dev_file_ops = {
+static const struct file_operations dev_file_op = {
 	.owner = THIS_MODULE,
-	.read = dev_read,
+	.read = read_dev,
 };
 
 static struct miscdevice result_dev = {
 	MISC_DYNAMIC_MINOR,
-	RESULT,
-	&dev_file_ops
+	RESULT_PROC,
+	&dev_file_op
 };
 
 
@@ -189,35 +196,35 @@ static int calc_init(void)
 {		
 	printk(KERN_INFO "Calculator module started working\n");
 
-	first_proc_file = proc_create_data(PROC_FIRST, 766, NULL, &proc_file_ops, (void*) &first_proc_index);
-	if (first_proc_file == NULL) {
+	first_file = proc_create_data(FIRST_PROC, 766, NULL, &proc_file_op, (void*) &first_ind);
+	if (first_file == NULL) {
 		printk(KERN_ERR "can't create first proc");
-		remove_proc_entry(PROC_FIRST, NULL);
+		remove_proc_entry(FIRST_PROC, NULL);
 		return -ENOMEM;
 	}
 
-	second_proc_file = proc_create_data(PROC_SECOND, 766, NULL, &proc_file_ops, (void*) &second_proc_index);
-	if (second_proc_file == NULL) {
+	second_file = proc_create_data(SECOND_PROC, 766, NULL, &proc_file_op, (void*) &second_ind);
+	if (second_file == NULL) {
 		printk(KERN_ERR "can't create second proc");
-		remove_proc_entry(PROC_FIRST, NULL);
-		remove_proc_entry(PROC_SECOND, NULL);
+		remove_proc_entry(FIRST_PROC, NULL);
+		remove_proc_entry(SECOND_PROC, NULL);
 		return -ENOMEM;
 	}
 
-	operand_proc_file = proc_create_data(PROC_OPERAND, 766, NULL, &proc_file_ops, (void*) &operand_proc_index);
-	if (operand_proc_file == NULL) {
+	operand_file = proc_create_data(OPERAND_PROC, 766, NULL, &proc_file_op, (void*) &operand_ind);
+	if (operand_file == NULL) {
 		printk(KERN_ERR "can't create operand proc");
-		remove_proc_entry(PROC_FIRST, NULL);
-		remove_proc_entry(PROC_SECOND, NULL);
-		remove_proc_entry(PROC_OPERAND, NULL);
+		remove_proc_entry(FIRST_PROC, NULL);
+		remove_proc_entry(SECOND_PROC, NULL);
+		remove_proc_entry(OPERAND_PROC, NULL);
 		return -ENOMEM;
 	}
 
 	if (misc_register(&result_dev)) {
 		printk(KERN_ERR "unable to register result misc device\n");
-		remove_proc_entry(PROC_FIRST, NULL);
-		remove_proc_entry(PROC_SECOND, NULL);
-		remove_proc_entry(PROC_OPERAND, NULL);
+		remove_proc_entry(FIRST_PROC, NULL);
+		remove_proc_entry(SECOND_PROC, NULL);
+		remove_proc_entry(OPERAND_PROC, NULL);
 		return -ENOMEM;
 	}
 	return 0;
@@ -226,9 +233,9 @@ static int calc_init(void)
 static void calc_exit(void)
 {
 	printk(KERN_INFO "Calculator module stopped working\n");
-	remove_proc_entry(PROC_FIRST, NULL);
-	remove_proc_entry(PROC_SECOND, NULL);
-	remove_proc_entry(PROC_OPERAND, NULL);
+	remove_proc_entry(FIRST_PROC, NULL);
+	remove_proc_entry(SECOND_PROC, NULL);
+	remove_proc_entry(OPERAND_PROC, NULL);
 	misc_deregister(&result_dev);
 }
 
